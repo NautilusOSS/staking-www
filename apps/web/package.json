@@ -49,6 +49,7 @@
     "react-redux": "^9.0.4",
     "react-router-dom": "^6.21.1",
     "typescript": "^5.2.2",
+    "ulujs": "^0.10.18",
     "vite": "^5.3.1",
     "vite-plugin-eslint": "^1.8.1",
     "vite-plugin-node-polyfills": "^0.22.0",

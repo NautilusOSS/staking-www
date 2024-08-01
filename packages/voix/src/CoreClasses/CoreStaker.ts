@@ -4,6 +4,7 @@ import {
   ABIContract,
   Algodv2,
   AtomicTransactionComposer,
+  Indexer,
   makePaymentTxnWithSuggestedParamsFromObject,
   Transaction,
 } from "algosdk";
@@ -13,6 +14,54 @@ import { getTransactionParams } from "@algorandfoundation/algokit-utils";
 import { AccountResult } from "@algorandfoundation/algokit-utils/types/indexer";
 import { CoreAccount } from "@repo/algocore";
 import { AlgoAmount } from "@algorandfoundation/algokit-utils/types/amount";
+import { CONTRACT } from "ulujs";
+
+// TODO move to ulujs abi
+const messengerCtcInfo = 72977126;
+const messengerSpec = {
+  name: "messenger",
+  desc: "messenger",
+  methods: [],
+  events: [
+    {
+      name: "PartKeyInfo",
+      args: [
+        {
+          type: "address",
+          name: "who",
+        },
+        {
+          type: "address",
+          name: "adddress",
+        },
+        {
+          type: "byte[32]",
+          name: "vote_k",
+        },
+        {
+          type: "byte[32]",
+          name: "sel_k",
+        },
+        {
+          type: "uint64",
+          name: "vote_fst",
+        },
+        {
+          type: "uint64",
+          name: "vote_lst",
+        },
+        {
+          type: "uint64",
+          name: "vote_kd",
+        },
+        {
+          type: "byte[64]",
+          name: "sp_key",
+        },
+      ],
+    },
+  ],
+};
 
 export class CoreStaker {
   accountData: AccountData;
@@ -33,8 +82,24 @@ export class CoreStaker {
     const contractId = this.contractId();
     return await new SmartContractStakingClient(
       { resolveBy: "id", id: contractId },
-      algod,
+      algod
     ).getGlobalState();
+  }
+
+  async getAvailableParticipationKeys(
+    algod: Algodv2,
+    indexer: Indexer,
+    address?: string
+  ): Promise<any> {
+    const ci = new CONTRACT(messengerCtcInfo, algod, indexer, messengerSpec, {
+      addr: this.stakingAddress(),
+      sk: new Uint8Array(0),
+    });
+    const evts = await ci.getEvents({
+      minRound: 0,
+      sender: address,
+    });
+    return evts.find((evt: any) => evt.name === "PartKeyInfo")?.events || [];
   }
 
   getLockingPeriod(state: StakingContractState): number {
@@ -52,19 +117,19 @@ export class CoreStaker {
   async lock(
     algod: Algodv2,
     months: number,
-    sender: TransactionSignerAccount,
+    sender: TransactionSignerAccount
   ): Promise<Transaction> {
     const contractId = this.contractId();
     const result = await new SmartContractStakingClient(
       { resolveBy: "id", id: contractId },
-      algod,
+      algod
     ).configure(
       {
         period: months,
       },
       {
         sender,
-      },
+      }
     );
 
     return result.transaction;
@@ -73,7 +138,7 @@ export class CoreStaker {
   async stake(
     algod: Algodv2,
     params: ParticipateParams,
-    sender: TransactionSignerAccount,
+    sender: TransactionSignerAccount
   ): Promise<string> {
     const contractId = this.contractId();
 
@@ -113,12 +178,12 @@ export class CoreStaker {
   async withdraw(
     algod: Algodv2,
     amount: number,
-    sender: TransactionSignerAccount,
+    sender: TransactionSignerAccount
   ): Promise<Transaction> {
     const contractId = this.contractId();
     const result = await new SmartContractStakingClient(
       { resolveBy: "id", id: contractId },
-      algod,
+      algod
     ).withdraw(
       {
         amount: amount,
@@ -128,7 +193,7 @@ export class CoreStaker {
         sendParams: {
           fee: AlgoAmount.MicroAlgos(2000),
         },
-      },
+      }
     );
 
     return result.transaction;
@@ -137,7 +202,7 @@ export class CoreStaker {
   async deposit(
     algod: Algodv2,
     amount: number,
-    sender: TransactionSignerAccount,
+    sender: TransactionSignerAccount
   ): Promise<string> {
     const txnParams = await getTransactionParams(undefined, algod);
     const atc = new AtomicTransactionComposer();
@@ -159,19 +224,19 @@ export class CoreStaker {
   async transfer(
     algod: Algodv2,
     address: string,
-    sender: TransactionSignerAccount,
+    sender: TransactionSignerAccount
   ): Promise<Transaction> {
     const contractId = this.contractId();
     const result = await new SmartContractStakingClient(
       { resolveBy: "id", id: contractId },
-      algod,
+      algod
     ).transfer(
       {
         newOwner: address,
       },
       {
         sender,
-      },
+      }
     );
 
     return result.transaction;

@@ -19,6 +19,7 @@ export type UserState = {
     loading: boolean;
     data: AccountData | undefined;
     availableContracts: AccountData[];
+    availableKeys?: any[];
   };
   staking: {
     loading: boolean;
@@ -54,7 +55,7 @@ export const loadAccountData: AsyncThunk<void, string, any> = createAsyncThunk(
       dispatch(resetUserState());
       dispatch(setAccountDataLoading(true));
       const availableContracts = await new StakingClient().getAccountData(
-        address,
+        address
       );
       dispatch(setAvailableContracts(availableContracts));
 
@@ -78,7 +79,7 @@ export const loadAccountData: AsyncThunk<void, string, any> = createAsyncThunk(
     } finally {
       dispatch(setAccountDataLoading(false));
     }
-  },
+  }
 );
 
 export const initAccountData: AsyncThunk<void, AccountData, any> =
@@ -91,9 +92,9 @@ export const initAccountData: AsyncThunk<void, AccountData, any> =
       dispatch(loadContractState(accountData));
       localStorage.setItem(
         "currentContractId",
-        accountData.contractId.toString(),
+        accountData.contractId.toString()
       );
-    },
+    }
   );
 
 export const loadStakingAccount: AsyncThunk<void, string, any> =
@@ -104,7 +105,7 @@ export const loadStakingAccount: AsyncThunk<void, string, any> =
       try {
         dispatch(setStakingAccountLoading(true));
         const account = await new AccountClient(voiStakingUtils.network).get(
-          address,
+          address
         );
         dispatch(setStakingAccount(account));
       } catch (e) {
@@ -112,7 +113,7 @@ export const loadStakingAccount: AsyncThunk<void, string, any> =
       } finally {
         dispatch(setStakingAccountLoading(false));
       }
-    },
+    }
   );
 
 export const loadContractState: AsyncThunk<void, AccountData, any> =
@@ -123,15 +124,21 @@ export const loadContractState: AsyncThunk<void, AccountData, any> =
       try {
         dispatch(setContractStateLoading(true));
         const state = await new CoreStaker(data).getStakingState(
-          voiStakingUtils.network.getAlgodClient(),
+          voiStakingUtils.network.getAlgodClient()
         );
+        console.log({ data });
+        const res = await new CoreStaker(data).getAvailableParticipationKeys(
+          voiStakingUtils.network.getAlgodClient(),
+          voiStakingUtils.network.getIndexerClient(),
+        )
+        console.log({ state, res });
         dispatch(setContractState(state));
       } catch (e) {
         /* empty */
       } finally {
         dispatch(setContractStateLoading(false));
       }
-    },
+    }
   );
 
 export const nodeSlice = createSlice({
@@ -147,6 +154,9 @@ export const nodeSlice = createSlice({
     },
     setAvailableContracts: (state, action: PayloadAction<AccountData[]>) => {
       state.account.availableContracts = action.payload;
+    },
+    setAvailableParticipationKeys: (state, action: PayloadAction<any[]>) => {
+      state.account.availableKeys = action.payload;
     },
     setStakingAccountLoading: (state, action: PayloadAction<boolean>) => {
       state.staking.loading = action.payload;
